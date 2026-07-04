@@ -41,28 +41,23 @@ async def _post(path: str, body, params: dict = None) -> str:
 # ── Discovery tools ───────────────────────────────────────────────────────────
 
 @mcp.tool()
-async def list_problems(category: str = "all") -> str:
-    """List problems in the Redux system. Category: all (default), npc (NP-Complete), p (polynomial), or nphard."""
-    paths = {
-        "npc":    "/Navigation/NPC_ProblemsRefactor",
-        "p":      "/Navigation/P_ProblemsRefactor",
-        "nphard": "/Navigation/NPHard_ProblemsRefactor",
-    }
-    return await _get(paths.get(category.lower(), "/Navigation/ALL_ProblemsRefactor"))
+async def list_problems() -> str:
+    """List all problems in the Redux system, regardless of complexity class."""
+    return await _get("/Navigation/ALL_ProblemsRefactor")
 
 
 @mcp.tool()
-async def list_solvers(problem: str, problem_type: str) -> str:
-    """List all solvers available for a given problem. problem_type: NPC, P, or NPHard."""
+async def list_solvers(problem: str) -> str:
+    """List all solvers available for a given problem."""
     return await _get("/Navigation/Problem_SolversRefactor",
-                      {"chosenProblem": problem, "problemType": problem_type})
+                      {"chosenProblem": problem})
 
 
 @mcp.tool()
-async def list_verifiers(problem: str, problem_type: str) -> str:
-    """List all verifiers available for a given problem. problem_type: NPC, P, or NPHard."""
+async def list_verifiers(problem: str) -> str:
+    """List all verifiers available for a given problem."""
     return await _get("/Navigation/Problem_VerifiersRefactor",
-                      {"chosenProblem": problem, "problemType": problem_type})
+                      {"chosenProblem": problem})
 
 
 @mcp.tool()
@@ -80,10 +75,10 @@ async def list_reductions(source: Optional[str] = None, target: Optional[str] = 
 
 
 @mcp.tool()
-async def list_visualizations(problem: str, problem_type: str) -> str:
-    """List all visualizations available for a given problem. problem_type: NPC, P, or NPHard."""
+async def list_visualizations(problem: str) -> str:
+    """List all visualizations available for a given problem."""
     return await _get("/Navigation/Problem_VisualizationsRefactor",
-                      {"chosenProblem": problem, "problemType": problem_type})
+                      {"chosenProblem": problem})
 
 
 @mcp.tool()
