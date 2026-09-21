@@ -113,6 +113,6 @@ Claude Desktop config:
 
 ## Dependencies
 
-- [mcp](https://github.com/modelcontextprotocol/python-sdk) — official Python MCP SDK (FastMCP)
+- [mcp](https://github.com/modelcontextprotocol/python-sdk) — official Python MCP SDK (2.x, `MCPServer`)
 - [httpx](https://www.python-httpx.org) — async HTTP client
 - [uvicorn](https://www.uvicorn.org) — ASGI server (http mode)

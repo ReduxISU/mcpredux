@@ -1,11 +1,12 @@
 """The load-bearing contract (see CLAUDE.md, "Don't absorb error signals"):
-a backend error must reach the client as a tool result with isError=True and
+a backend error must reach the client as a tool result with is_error=True and
 the backend body intact. A well-meaning try/except that returns the body as a
 plain string would keep the text but drop the signal; these tests fail on it.
 """
 import json
 
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 
 from _util import text_of
 
@@ -34,7 +35,7 @@ async def test_backend_400_is_a_tool_error_with_body(mcp_client, redux):
         "instance": "(x1 | !x2 | x3)",
     })
 
-    assert result.isError
+    assert result.is_error
     assert INPUT_SHAPE_MISMATCH in text_of(result)
 
 
@@ -44,7 +45,7 @@ async def test_backend_500_is_a_tool_error_with_body(mcp_client, redux):
     result = await mcp_client.call_tool("solve_problem",
                                         {"solver": "CliqueBruteForce", "instance": "{}"})
 
-    assert result.isError
+    assert result.is_error
     assert "NullReferenceException" in text_of(result)
 
 
@@ -54,7 +55,7 @@ async def test_get_tools_surface_errors_too(mcp_client, redux, status):
 
     result = await mcp_client.call_tool("get_info", {"interface": "NOPE"})
 
-    assert result.isError
+    assert result.is_error
     assert f"backend said {status}" in text_of(result)
 
 
@@ -64,7 +65,7 @@ async def test_success_is_not_an_error(mcp_client, redux):
     result = await mcp_client.call_tool("verify_solution", {
         "verifier": "CliqueVerifier", "certificate": "{1,2}", "problem_instance": "{}"})
 
-    assert not result.isError
+    assert not result.is_error
     assert text_of(result) == "true"
 
 
@@ -73,15 +74,15 @@ async def test_helpers_raise_rather_than_return(redux):
     import server
     redux.respond(400, "bad request body")
 
-    with pytest.raises(RuntimeError, match="bad request body"):
+    with pytest.raises(ToolError, match="bad request body"):
         await server._get("/x")
-    with pytest.raises(RuntimeError, match="bad request body"):
+    with pytest.raises(ToolError, match="bad request body"):
         await server._post("/x", "body")
 
 
 async def test_bad_arguments_never_reach_the_backend(mcp_client, redux):
-    # FastMCP validates the schema before the tool body runs.
+    # MCPServer validates the schema before the tool body runs.
     result = await mcp_client.call_tool("solve_problem", {"solver": "X"})  # missing instance
 
-    assert result.isError
+    assert result.is_error
     assert redux.requests == []
