@@ -3,6 +3,8 @@ name: Docker
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: '0 6 * * 1'  # Mondays 06:00 UTC — catches base image updates
 
@@ -16,7 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: astral-sh/setup-uv@v5
+
+      # Catch a requirements.txt edit that was committed without regenerating
+      # the lock — otherwise the image silently ignores the new constraint.
+      - name: Check lock is current
+        run: make lock-check
+
       - uses: docker/login-action@v4.5.2
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -30,14 +40,34 @@ jobs:
             type=sha,prefix=,format=short
             type=raw,value=latest
 
+      # Build and load locally first. Nothing is pushed until the smoke test
+      # below proves the image actually starts.
       - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test the image
+        run: ./test_image_smoke.sh "$(echo '${{ steps.meta.outputs.tags }}' | head -n1)"
+
+      # Re-runs the build from cache, so this is a push of the exact image the
+      # smoke test just validated.
+      - uses: docker/build-push-action@v7
+        if: github.event_name != 'pull_request'
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
 
       - uses: actions/delete-package-versions@v5
+        if: github.event_name != 'pull_request'
         with:
           package-name: ${{ github.event.repository.name }}
           package-type: container

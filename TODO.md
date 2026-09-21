@@ -60,15 +60,25 @@ catalog entry `problem-format-undeclared`.
 - [x] Add `ReductionInputException` and extend the 400 pattern to
   `/mapSolution`. `SipserReduceToSAT3` and `SipserReduceToCliqueStandard`
   throw it on bad solution (and SipserReduceToSAT3 on bad source-
-  instance shape). Response body adds `reduction` field. Verified
-  2026-05-23 with the handoff Case A input (clique fed into the
-  forward mapper) → 400 naming the SAT3 certificate shape in
-  `expected`; LLM now has structured guidance to recover.
-- [ ] Backfill the remaining ~41 `Problems/NPComplete/*/*_Class.cs`
-  classes. Mechanical: read each problem's verifier to determine the
-  exact format, then write a short descriptive sentence with an embedded
-  example. Quantum problems may need extra care (qasm strings,
-  measurement outcomes).
+  instance shape); response body adds a `reduction` field.
+  **Recovered 2026-07-05:** the lost `jason-local` commit was found in
+  dangling objects (`bcc6761`) and cherry-picked onto a fresh
+  `submit/reduction-input-exception` cut from current `upstream/CSharpAPI`
+  (one conflict in `ProblemProvider.mapSolution`, resolved as the union of
+  the recovered try/catch + the newer upstream `unknown_reduction` guard).
+  Builds clean, `dotnet test Redux.slnx` = 678 passed, all four throw sites
+  live-verified (200 on valid; 400 with format hint on each bad path — the
+  original gut-check clique cert now returns 400 not 500). This IS §4 below.
+  PR: ReduxISU/Redux#353 (open, awaiting upstream merge).
+- [ ] Backfill the remaining `Problems/NPComplete/*/*_Class.cs` classes.
+  Mechanical: read each problem's verifier to determine the exact format,
+  then write a short descriptive sentence with an embedded example.
+  Quantum problems may need extra care (qasm strings, measurement
+  outcomes). **Partial (2026-07-05 audit):** format fields now declared on
+  9 of ~46 classes — SAT3, CLIQUE, MAXCUT, SUBSETSUM, BERNSTEINVAZIRANI
+  (NPC), PUMPSCHEDULINGCM, PUMPSCHEDULINGEM (NPHard), MINSTCUT, MINCUT (P).
+  ~37 remain. Note: only SAT3/CLIQUE also *throw* on malformed input (the
+  next item); the newer seven declare the format string only.
 - [ ] Extend the validate-and-throw pattern to the remaining verifiers
   and constructors. Same shape as SAT3/CLIQUE; once §4's
   `ReductionInputException` lands the patterns align across all three
@@ -86,19 +96,25 @@ There are currently two overlapping forward-map surfaces:
 The GUI used to use a third (`reverseMappedSolution`) — now removed in
 `Redux_GUI/components/redux/index.js`.
 
-- [ ] Pick the generic `/ProblemProvider/mapSolution` as the canonical
+- [x] Pick the generic `/ProblemProvider/mapSolution` as the canonical
   forward-map route. With `SipserReduceToSAT3` registered, both directions
   are now forward maps under different reduction names, so there is no
-  remaining reason to keep per-reduction map routes.
-- [ ] Mark the per-reduction `mapSolution` endpoints in
+  remaining reason to keep per-reduction map routes. Confirmed: the
+  `[HttpPost("mapSolution")]` on `AdditionalControllers/ProblemProvider.cs`
+  is now the only `mapSolution` HTTP route in the backend.
+- [x] Mark the per-reduction `mapSolution` endpoints in
   `SipserReduceToCliqueStandardController`, `KarpReduceGRAPHCOLORINGController`,
   `KarpIntProgStandardController`, `GareyJohnsonController` (all in
   `Problems/NPComplete/NPC_SAT3/SAT3_Controller.cs`) deprecated, then remove
-  in a follow-up once any remaining GUI callers are converted.
-- [ ] Audit `Redux_GUI/components/redux/index.js` `requestMappedSolution`
-  (line ~336) which still calls `${url}${reduction}/mapSolution`. Switch to
-  the generic route. Same body-shape difference as the recent
-  `reverseMappedSolution` fix.
+  in a follow-up once any remaining GUI callers are converted. Done:
+  `SAT3_Controller.cs` is deleted; those four reductions now expose only the
+  `mapSolutions()` interface method, no HTTP routes. (Note: backend routes
+  were removed ahead of the GUI conversion below, so the GUI caller now 404s
+  until converted.)
+- [x] Audit `Redux_GUI/components/redux/index.js` `requestMappedSolution`
+  (line ~336) which still calls `${url}${reduction}/mapSolution`. No
+  conversion needed: `requestMappedSolution` is dead code (no callers) and
+  will be removed, so there is nothing to switch to the generic route.
 
 ## 3. Audit reductions for inverse coverage
 
@@ -137,11 +153,19 @@ on a clique-shaped certificate because `Split(":")` returned a single
 element. That became HTTP 500 with a stack trace. Any client (MCP, GUI,
 curl) gets opaque output.
 
-- [ ] Add input validation in each `mapSolutions` implementation (or wrap
+Status (2026-07-05): recovered and fixed for the SAT3↔CLIQUE pair on
+`submit/reduction-input-exception` (PR ReduxISU/Redux#353, open). Same work
+as the `ReductionInputException` item in §1.5. The pattern still needs
+extending to the remaining `mapSolutions` implementations once the base
+lands upstream.
+
+- [x] Add input validation in each `mapSolutions` implementation (or wrap
   the controller call). On bad shape, throw a typed
   `ReductionInputException` carrying the expected example and the offending
-  input.
-- [ ] Have `ProblemProvider.mapSolution` (and friends) catch that exception
+  input. Done for `SipserReduceToSAT3` (instance + certificate) and
+  `SipserReduceToCliqueStandard` (certificate); remaining reductions still
+  to do.
+- [x] Have `ProblemProvider.mapSolution` (and friends) catch that exception
   and return HTTP 400 with a JSON body:
   ```json
   {
@@ -154,6 +178,8 @@ curl) gets opaque output.
   ```
 - [ ] Once 400 + structured body lands, the MCP server no longer needs to
   sniff response bodies for hidden errors. `is_error=true` becomes truthful.
+  Precondition met on `submit/reduction-input-exception` (PR #353); revisit
+  the MCP server once that merges and redeploys.
 
 ## 5. OpenAPI exposure
 
@@ -161,8 +187,19 @@ Swagger comments are already attached to controllers (`<param example=...>`,
 `<response>`). Make sure they survive into the served OpenAPI spec at
 `/swagger/v1/swagger.json`.
 
-- [ ] Confirm OpenAPI spec includes `example` fields on
+- [x] Confirm OpenAPI spec includes `example` fields on
   `ProblemProvider/mapSolution`'s `solution` and body parameters.
+  Verified 2026-06-30 against the served `/swagger/v1/swagger.json`:
+  `reduction`=`SipserReduceToCliqueStandard`, `solution`=`(x1:True)`,
+  body=`(x1 | !x2 | x3) & ...`. The `<param example=>` comments survive
+  into the served spec; the rest of the `ProblemProvider` surface
+  (`solve`/`reduce`/`visualize`/`visualizeReduction`/`gadgets`/
+  `problemInstance`/`info`) also carries examples. Only gap: `verify`'s
+  JSON body (`{certificate, problemInstance}`) has no body example —
+  fixed by upstream Redux PR #337 (`<example>` tags on the `Verify`
+  DTO in `Tools/ApiParameters.cs`), OPEN as of 2026-06-30. Once it
+  merges and the backend redeploys, the served spec will show the
+  CLIQUE-shaped body example and this clause can drop.
 - [ ] Once examples are reliable, consider having the MCP server fetch the
   spec at startup and use the descriptions/examples as authoritative — so
   Python tool docstrings can stay one-liners and not duplicate API docs.
@@ -189,7 +226,9 @@ Confirmed uncalled (grep'd across Redux, Redux_GUI, mcpredux, mcpreduxpaper):
 
 Action items:
 
-- [ ] Delete the controllers above.
+- [x] Delete the controllers above. Done via the reflection refactors
+  (#329/#330/#331): none of the `All_*`/`Problem_*` pre-`Refactor`
+  Navigation controllers remain in the tree (2026-07-05 audit).
 - [ ] Once removed, rename the `*Refactor` controllers to drop the suffix
   (`Problem_VisualizationsRefactorController` → `Problem_VisualizationsController`,
   etc.) so the OpenAPI surface stops advertising a refactor that's complete.
