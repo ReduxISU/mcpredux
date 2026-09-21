@@ -36,10 +36,10 @@ async def test_every_tool_has_a_description(mcp_client):
 
 
 async def test_every_tool_argument_is_in_the_schema(mcp_client):
-    # Sanity check that FastMCP exposed the Python signatures as input schemas.
+    # Sanity check that MCPServer exposed the Python signatures as input schemas.
     tools = {t.name: t for t in (await mcp_client.list_tools()).tools}
-    assert set(tools["verify_solution"].inputSchema["properties"]) == {
+    assert set(tools["verify_solution"].input_schema["properties"]) == {
         "verifier", "certificate", "problem_instance"}
-    assert set(tools["reduce_certificate"].inputSchema["properties"]) == {
+    assert set(tools["reduce_certificate"].input_schema["properties"]) == {
         "reduction", "certificate", "instance"}
-    assert set(tools["list_reductions"].inputSchema.get("required", [])) == set()
+    assert set(tools["list_reductions"].input_schema.get("required", [])) == set()

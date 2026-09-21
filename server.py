@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from typing import Optional
 from pathlib import Path
 import argparse
@@ -14,15 +15,22 @@ DEFAULT_BASE_URL = "http://redux.portneuf.cose.isu.edu:27000"
 # Set by main() before the server starts.
 _client: httpx.AsyncClient = None
 
-mcp = FastMCP("redux")
+mcp = MCPServer("redux")
 
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
+# Raise `ToolError`, not a bare exception. mcp 2.x splits tool failures in two:
+# a `ToolError` is "anticipated" and its message reaches the model verbatim in
+# an is_error result, while any other exception is treated as a crash and the
+# SDK withholds its text, sending only "Error executing tool <name>". Redux
+# error bodies carry the `expected_example` and `hint` the model self-corrects
+# from, so they must travel as ToolError. See tests/test_errors.py.
+
 async def _get(path: str, params: dict = None) -> str:
     r = await _client.get(path, params=params)
     if r.is_error:
-        raise RuntimeError(r.text)
+        raise ToolError(r.text)
     return r.text
 
 
@@ -34,7 +42,7 @@ async def _post(path: str, body, params: dict = None) -> str:
         headers={"Content-Type": "application/json"},
     )
     if r.is_error:
-        raise RuntimeError(r.text)
+        raise ToolError(r.text)
     return r.text
 
 
@@ -278,7 +286,12 @@ def main():
     _client = httpx.AsyncClient(base_url=args.base_url, timeout=30.0)
 
     if args.mode == "http":
-        uvicorn.run(mcp.streamable_http_app(), host=args.host, port=args.port)
+        # `host` must be passed through, not just handed to uvicorn: when it is
+        # left at its 127.0.0.1 default, mcp 2.x auto-enables DNS-rebinding
+        # protection and answers 421 to any request whose Host header isn't
+        # localhost — which is every real request when we bind 0.0.0.0.
+        uvicorn.run(mcp.streamable_http_app(host=args.host),
+                    host=args.host, port=args.port)
     else:
         mcp.run()
 

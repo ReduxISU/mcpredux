@@ -5,10 +5,16 @@ description = "MCP server for the Redux algorithms API"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-# mcp is capped below 2.0: that release removed `mcp.server.fastmcp`, which
-# server.py is built on. Lifting the cap requires porting to the 2.x API.
+# mcp has a 2.x floor, not a cap: server.py uses `MCPServer` and `ToolError`,
+# which only exist from 2.0 on (2.0 removed the `mcp.server.fastmcp` module
+# this server was originally built on). `<3` keeps the next major from landing
+# unread — 1.x → 2.x renamed the server class, moved tool-error semantics, and
+# changed result fields to snake_case, so a major bump here is a porting job.
+#
+# httpx is ours alone now: mcp 2.x moved its own client to httpx2, so nothing
+# pulls httpx in transitively any more. server.py imports it directly.
 dependencies = [
-    "mcp>=1.28.1,<2",
+    "mcp>=2.2.0,<3",
     "httpx>=0.28.1",
     "uvicorn>=0.31.1",
 ]

@@ -3,12 +3,12 @@
 `redux` replaces the server's HTTP client with one whose transport is a
 scripted stand-in for the Redux backend: no network, every request recorded,
 one configurable canned response. `mcp_client` connects a real MCP client
-session to the FastMCP server in-process, so tool calls go through the same
-argument validation and exception-to-isError conversion the LLM sees.
+session to the MCPServer in-process, so tool calls go through the same
+argument validation and exception-to-is_error conversion the LLM sees.
 """
 import httpx
 import pytest
-from mcp.shared.memory import create_connected_server_and_client_session
+from mcp import Client
 
 import server
 
@@ -58,5 +58,5 @@ async def redux(monkeypatch):
 
 @pytest.fixture
 async def mcp_client(redux):
-    async with create_connected_server_and_client_session(server.mcp) as session:
+    async with Client(server.mcp) as session:
         yield session

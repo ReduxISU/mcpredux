@@ -47,7 +47,7 @@ GET_CASES = [
 async def test_get_tools_send_expected_request(mcp_client, redux, tool, args, path, params):
     result = await mcp_client.call_tool(tool, args)
 
-    assert not result.isError
+    assert not result.is_error
     req = redux.last
     assert req.method == "GET"
     assert req.url.path == path
@@ -81,7 +81,7 @@ POST_CASES = [
 async def test_post_tools_send_expected_request(mcp_client, redux, tool, args, path, params, body):
     result = await mcp_client.call_tool(tool, args)
 
-    assert not result.isError
+    assert not result.is_error
     req = redux.last
     assert req.method == "POST"
     assert req.url.path == path
@@ -95,7 +95,7 @@ async def test_backend_body_passes_through_unchanged(mcp_client, redux):
 
     result = await mcp_client.call_tool("list_problems", {})
 
-    assert not result.isError
+    assert not result.is_error
     assert text_of(result) == '{"problems": ["SAT3", "CLIQUE"]}'
 
 
