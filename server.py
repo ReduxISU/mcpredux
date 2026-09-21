@@ -158,12 +158,52 @@ async def visualize_problem(visualization: str, instance: str) -> str:
 
 # ── Proxy mode ───────────────────────────────────────────────────────────────
 
-async def _proxy_main(url: str) -> None:
-    """Read JSON-RPC from stdin, forward to HTTP MCP server, write responses to stdout."""
+def _emit(out, data: bytes) -> None:
+    out.write(data + b"\n")
+    out.flush()
+
+
+async def _proxy_forward(client: httpx.AsyncClient, url: str, line: bytes,
+                         session_id: Optional[str], out) -> Optional[str]:
+    """Forward one JSON-RPC line to the HTTP MCP server and write any response
+    lines to `out`. Returns the session id to use for the next request (the
+    server's Mcp-Session-Id if it sent one, else the one passed in)."""
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
     }
+    if session_id:
+        headers["Mcp-Session-Id"] = session_id
+
+    try:
+        async with client.stream("POST", url, content=line, headers=headers) as resp:
+            if sid := resp.headers.get("Mcp-Session-Id"):
+                session_id = sid
+
+            if resp.status_code == 202:
+                return session_id  # notification accepted, no response body
+
+            ct = resp.headers.get("content-type", "")
+            if "text/event-stream" in ct:
+                async for event_line in resp.aiter_lines():
+                    if event_line.startswith("data: "):
+                        data = event_line[6:].strip()
+                        if data and data != "[DONE]":
+                            _emit(out, data.encode())
+            else:
+                body = (await resp.aread()).strip()
+                if body:
+                    _emit(out, body)
+    except Exception as e:
+        err = {"jsonrpc": "2.0", "id": None,
+               "error": {"code": -32603, "message": f"Proxy error: {e}"}}
+        _emit(out, json.dumps(err).encode())
+
+    return session_id
+
+
+async def _proxy_main(url: str) -> None:
+    """Read JSON-RPC from stdin, forward to HTTP MCP server, write responses to stdout."""
     session_id = None
 
     loop = asyncio.get_event_loop()
@@ -181,37 +221,8 @@ async def _proxy_main(url: str) -> None:
             line = line.strip()
             if not line:
                 continue
-
-            hdrs = {**headers}
-            if session_id:
-                hdrs["Mcp-Session-Id"] = session_id
-
-            try:
-                async with client.stream("POST", url, content=line, headers=hdrs) as resp:
-                    if sid := resp.headers.get("Mcp-Session-Id"):
-                        session_id = sid
-
-                    if resp.status_code == 202:
-                        continue  # notification accepted, no response body
-
-                    ct = resp.headers.get("content-type", "")
-                    if "text/event-stream" in ct:
-                        async for event_line in resp.aiter_lines():
-                            if event_line.startswith("data: "):
-                                data = event_line[6:].strip()
-                                if data and data != "[DONE]":
-                                    sys.stdout.buffer.write(data.encode() + b"\n")
-                                    sys.stdout.buffer.flush()
-                    else:
-                        body = (await resp.aread()).strip()
-                        if body:
-                            sys.stdout.buffer.write(body + b"\n")
-                            sys.stdout.buffer.flush()
-            except Exception as e:
-                err = {"jsonrpc": "2.0", "id": None,
-                       "error": {"code": -32603, "message": f"Proxy error: {e}"}}
-                sys.stdout.buffer.write(json.dumps(err).encode() + b"\n")
-                sys.stdout.buffer.flush()
+            session_id = await _proxy_forward(client, url, line, session_id,
+                                              sys.stdout.buffer)
 
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
