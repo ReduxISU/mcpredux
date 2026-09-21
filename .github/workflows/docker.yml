@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # Any PR, whatever its base, so stacked PRs get tested. Every push/delete
+  # step below is gated on github.event_name != 'pull_request'.
   pull_request:
-    branches: [main]
   schedule:
     - cron: '0 6 * * 1'  # Mondays 06:00 UTC — catches base image updates
 
