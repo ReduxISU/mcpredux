@@ -12,11 +12,22 @@ requires-python = ">=3.10"
 # changed result fields to snake_case, so a major bump here is a porting job.
 #
 # httpx is ours alone now: mcp 2.x moved its own client to httpx2, so nothing
-# pulls httpx in transitively any more. server.py imports it directly.
+# pulls httpx in transitively any more. server.py imports it directly. Its
+# `<1` is not boilerplate: httpx 1.0 is in active development (1.0.dev6 as of
+# 2026-08-31), and a 0.x → 1.0 on an HTTP client is where `AsyncClient`
+# kwargs and `MockTransport` semantics can move — and MockTransport is what
+# the whole fake-Redux fixture in tests/conftest.py is built on.
+#
+# uvicorn arrives transitively via mcp too, but server.py imports it directly
+# (`uvicorn.run` in http mode), so it stays declared here rather than
+# inherited from a dependency that could drop it.
+#
+# The pattern across all three: minors flow through uv.lock, majors have to
+# land as a PR somebody reads.
 dependencies = [
     "mcp>=2.2.0,<3",
-    "httpx>=0.28.1",
-    "uvicorn>=0.31.1",
+    "httpx>=0.28.1,<1",
+    "uvicorn>=0.31.1,<1",
 ]
 
 # Installed by `uv sync` for development; excluded from the Docker image,
