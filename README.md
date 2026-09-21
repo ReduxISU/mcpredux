@@ -26,12 +26,17 @@ problems including NP-Complete, NP-Hard, and P-class problems.
 
 ## Setup
 
-Requires Python 3.10+.
+Requires [uv](https://docs.astral.sh/uv/). It installs a Python interpreter
+if needed (the version in `.python-version`) and creates `.venv` from the
+lock file:
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+uv sync
 ```
+
+Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`. After
+changing `pyproject.toml`, run `uv lock` and commit both files together; CI
+and the Docker build fail if the lock is stale.
 
 ## Modes
 
@@ -41,7 +46,7 @@ Runs as a local MCP server over stdin/stdout. Used when the client and
 server are on the same machine.
 
 ```sh
-python server.py [--base-url URL]
+uv run server.py [--base-url URL]
 ```
 
 Claude Desktop / Claude Code config:
@@ -50,8 +55,8 @@ Claude Desktop / Claude Code config:
 {
   "mcpServers": {
     "redux": {
-      "command": "/path/to/mcpredux/.venv/bin/python",
-      "args": ["/path/to/mcpredux/server.py"]
+      "command": "uv",
+      "args": ["--directory", "/path/to/mcpredux", "run", "server.py"]
     }
   }
 }
@@ -63,7 +68,7 @@ Runs as an HTTP server (streamable-HTTP MCP transport) suitable for
 deployment behind a reverse proxy such as nginx.
 
 ```sh
-python server.py --mode http [--host 127.0.0.1] [--port 8000]
+uv run server.py --mode http [--host 127.0.0.1] [--port 8000]
 ```
 
 Claude Code config (supports remote HTTP natively):
@@ -86,7 +91,7 @@ Claude Desktop spawns this process locally; it forwards all traffic
 to the remote server.
 
 ```sh
-python server.py --mode proxy --proxy-url https://your-server/mcp
+uv run server.py --mode proxy --proxy-url https://your-server/mcp
 ```
 
 Claude Desktop config:
@@ -95,9 +100,9 @@ Claude Desktop config:
 {
   "mcpServers": {
     "redux": {
-      "command": "/path/to/mcpredux/.venv/bin/python",
+      "command": "uv",
       "args": [
-        "/path/to/mcpredux/server.py",
+        "--directory", "/path/to/mcpredux", "run", "server.py",
         "--mode", "proxy",
         "--proxy-url", "https://your-server/mcp"
       ]
