@@ -1,4 +1,4 @@
-name: Docker
+name: CI
 
 on:
   push:
@@ -9,12 +9,8 @@ on:
     - cron: '0 6 * * 1'  # Mondays 06:00 UTC — catches base image updates
 
 jobs:
-  build-and-push:
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - uses: actions/checkout@v7
 
@@ -25,6 +21,20 @@ jobs:
       # this gives a clear message before a full image build.
       - name: Check lock is current
         run: uv lock --check
+
+      - run: uv sync --locked
+
+      - run: uv run pytest
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v7
 
       - uses: docker/login-action@v4.5.2
         if: github.event_name != 'pull_request'

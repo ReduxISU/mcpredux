@@ -2,3 +2,4 @@ mcp-weather-server/
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
