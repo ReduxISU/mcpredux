@@ -1,8 +1,0 @@
-# Abstract runtime dependencies — the human-edited input.
-# The installed set is pinned in requirements-lock.txt; regenerate with `make lock`.
-#
-# mcp is capped below 2.0: that release removed `mcp.server.fastmcp`, which
-# server.py is built on. Lifting the cap requires porting to the 2.x API.
-mcp>=1.28.1,<2
-httpx>=0.28.1
-uvicorn>=0.31.1

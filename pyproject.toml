@@ -1,0 +1,22 @@
+[project]
+name = "mcpredux"
+version = "0.1.0"
+description = "MCP server for the Redux algorithms API"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+# mcp is capped below 2.0: that release removed `mcp.server.fastmcp`, which
+# server.py is built on. Lifting the cap requires porting to the 2.x API.
+dependencies = [
+    "mcp>=1.28.1,<2",
+    "httpx>=0.28.1",
+    "uvicorn>=0.31.1",
+]
+
+# Installed by `uv sync` for development; excluded from the Docker image,
+# which runs `uv sync --no-dev`.
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]

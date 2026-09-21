@@ -20,10 +20,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      # Catch a requirements.txt edit that was committed without regenerating
-      # the lock — otherwise the image silently ignores the new constraint.
+      # Catch a pyproject.toml edit that was committed without running
+      # `uv lock`. The Dockerfile's `uv sync --locked` would also fail, but
+      # this gives a clear message before a full image build.
       - name: Check lock is current
-        run: make lock-check
+        run: uv lock --check
 
       - uses: docker/login-action@v4.5.2
         if: github.event_name != 'pull_request'
