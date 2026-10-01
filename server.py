@@ -8,6 +8,8 @@ import httpx
 import uvicorn
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 DEFAULT_BASE_URL = "http://redux.portneuf.cose.isu.edu:27000"
 
@@ -44,6 +46,18 @@ async def _post(path: str, body, params: dict = None) -> str:
     if r.is_error:
         raise ToolError(r.text)
     return r.text
+
+
+# ── Readiness ─────────────────────────────────────────────────────────────────
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_: Request) -> PlainTextResponse:
+    """Answers on the http transport without touching the Redux backend, so it
+    proves only that this process is up and serving — which is what a compose
+    healthcheck or `rbs integration-test` needs before sending real traffic.
+    """
+    return PlainTextResponse("ok")
 
 
 # ── Discovery tools ───────────────────────────────────────────────────────────
