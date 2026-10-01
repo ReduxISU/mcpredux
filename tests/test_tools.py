@@ -6,7 +6,6 @@ the MCP client so the argument names under test are the ones the LLM uses.
 import json
 
 import pytest
-
 from _util import text_of
 
 pytestmark = pytest.mark.anyio

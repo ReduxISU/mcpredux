@@ -7,9 +7,8 @@ plain string would keep the text but drop the signal; these tests fail on it.
 import json
 
 import pytest
-from mcp.server.mcpserver.exceptions import ToolError
-
 from _util import text_of
+from mcp.server.mcpserver.exceptions import ToolError
 
 pytestmark = pytest.mark.anyio
 

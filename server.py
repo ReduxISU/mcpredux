@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-from mcp.server.mcpserver import MCPServer
-from mcp.server.mcpserver.exceptions import ToolError
-from typing import Optional
-from pathlib import Path
 import argparse
 import asyncio
-import httpx
 import json
 import sys
+
+import httpx
 import uvicorn
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 DEFAULT_BASE_URL = "http://redux.portneuf.cose.isu.edu:27000"
 
@@ -71,9 +70,7 @@ async def list_verifiers(problem: str) -> str:
 
 
 @mcp.tool()
-async def list_reductions(
-    source: Optional[str] = None, target: Optional[str] = None
-) -> str:
+async def list_reductions(source: str | None = None, target: str | None = None) -> str:
     """Return the reduction graph as an adjacency map: from -> to -> [{className, endpoint, inputType, outputType}].
     Omit both source and target to get the full graph for multi-step planning.
     Pass source (e.g. "CLIQUE") to filter to edges originating there.
@@ -115,10 +112,10 @@ async def get_info(interface: str) -> str:
 @mcp.tool()
 async def generate_problem(
     problem_type: str = "undirected-graph",
-    n: Optional[int] = None,
-    density: Optional[int] = None,
-    k: Optional[int] = None,
-    c: Optional[int] = None,
+    n: int | None = None,
+    density: int | None = None,
+    k: int | None = None,
+    c: int | None = None,
 ) -> str:
     """Generate a random problem instance.
     problem_type: undirected-graph (default), directed-graph, or sat3.
@@ -194,8 +191,8 @@ def _emit(out, data: bytes) -> None:
 
 
 async def _proxy_forward(
-    client: httpx.AsyncClient, url: str, line: bytes, session_id: Optional[str], out
-) -> Optional[str]:
+    client: httpx.AsyncClient, url: str, line: bytes, session_id: str | None, out
+) -> str | None:
     """Forward one JSON-RPC line to the HTTP MCP server and write any response
     lines to `out`. Returns the session id to use for the next request (the
     server's Mcp-Session-Id if it sent one, else the one passed in)."""
