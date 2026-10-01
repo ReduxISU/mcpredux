@@ -2,6 +2,7 @@
 line at a time. `_proxy_forward` handles a single line; these tests drive it
 with a scripted HTTP endpoint and a BytesIO standing in for stdout.
 """
+
 import io
 import json
 
@@ -20,7 +21,9 @@ REQUEST = b'{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 class FakeEndpoint:
     def __init__(self):
         self.requests: list[httpx.Request] = []
-        self.response = httpx.Response(200, content=b'{"jsonrpc":"2.0","id":1,"result":{}}')
+        self.response = httpx.Response(
+            200, content=b'{"jsonrpc":"2.0","id":1,"result":{}}'
+        )
         self.raise_exc = None
 
     def handler(self, request):
@@ -62,7 +65,8 @@ async def test_json_response_is_written_as_one_line(client, endpoint):
 
 async def test_session_id_is_captured_then_echoed(client, endpoint):
     endpoint.response = httpx.Response(
-        200, content=b"{}", headers={"Mcp-Session-Id": "abc123"})
+        200, content=b"{}", headers={"Mcp-Session-Id": "abc123"}
+    )
     out = io.BytesIO()
 
     sid = await _proxy_forward(client, URL, REQUEST, None, out)
@@ -93,7 +97,8 @@ async def test_sse_data_lines_are_unwrapped(client, endpoint):
         b"data: [DONE]\n"
     )
     endpoint.response = httpx.Response(
-        200, content=sse, headers={"content-type": "text/event-stream"})
+        200, content=sse, headers={"content-type": "text/event-stream"}
+    )
     out = io.BytesIO()
 
     await _proxy_forward(client, URL, REQUEST, None, out)

@@ -3,12 +3,12 @@ a backend error must reach the client as a tool result with is_error=True and
 the backend body intact. A well-meaning try/except that returns the body as a
 plain string would keep the text but drop the signal; these tests fail on it.
 """
+
 import json
 
 import pytest
-from mcp.server.mcpserver.exceptions import ToolError
-
 from _util import text_of
+from mcp.server.mcpserver.exceptions import ToolError
 
 pytestmark = pytest.mark.anyio
 
@@ -16,24 +16,29 @@ pytestmark = pytest.mark.anyio
 # Shape of the structured 400 Redux returns for a malformed reduction input
 # (TODO.md §4). The content is the contract: the LLM needs `expected_example`
 # and `hint` verbatim to self-correct.
-INPUT_SHAPE_MISMATCH = json.dumps({
-    "error": "input_shape_mismatch",
-    "reduction": "SipserReduceToCliqueStandard",
-    "expected_example": "(x1:True,x2:False,...)",
-    "received": "{x1_0,x2_1,!x3_3}",
-    "hint": "This input looks like a CLIQUE certificate. "
-            "Use reduction=SipserReduceToSAT3 to map in that direction.",
-})
+INPUT_SHAPE_MISMATCH = json.dumps(
+    {
+        "error": "input_shape_mismatch",
+        "reduction": "SipserReduceToCliqueStandard",
+        "expected_example": "(x1:True,x2:False,...)",
+        "received": "{x1_0,x2_1,!x3_3}",
+        "hint": "This input looks like a CLIQUE certificate. "
+        "Use reduction=SipserReduceToSAT3 to map in that direction.",
+    }
+)
 
 
 async def test_backend_400_is_a_tool_error_with_body(mcp_client, redux):
     redux.respond(400, INPUT_SHAPE_MISMATCH)
 
-    result = await mcp_client.call_tool("reduce_certificate", {
-        "reduction": "SipserReduceToCliqueStandard",
-        "certificate": "{x1_0,x2_1,!x3_3}",
-        "instance": "(x1 | !x2 | x3)",
-    })
+    result = await mcp_client.call_tool(
+        "reduce_certificate",
+        {
+            "reduction": "SipserReduceToCliqueStandard",
+            "certificate": "{x1_0,x2_1,!x3_3}",
+            "instance": "(x1 | !x2 | x3)",
+        },
+    )
 
     assert result.is_error
     assert INPUT_SHAPE_MISMATCH in text_of(result)
@@ -42,8 +47,9 @@ async def test_backend_400_is_a_tool_error_with_body(mcp_client, redux):
 async def test_backend_500_is_a_tool_error_with_body(mcp_client, redux):
     redux.respond(500, "System.NullReferenceException: Object reference not set")
 
-    result = await mcp_client.call_tool("solve_problem",
-                                        {"solver": "CliqueBruteForce", "instance": "{}"})
+    result = await mcp_client.call_tool(
+        "solve_problem", {"solver": "CliqueBruteForce", "instance": "{}"}
+    )
 
     assert result.is_error
     assert "NullReferenceException" in text_of(result)
@@ -62,8 +68,14 @@ async def test_get_tools_surface_errors_too(mcp_client, redux, status):
 async def test_success_is_not_an_error(mcp_client, redux):
     redux.respond(200, "true")
 
-    result = await mcp_client.call_tool("verify_solution", {
-        "verifier": "CliqueVerifier", "certificate": "{1,2}", "problem_instance": "{}"})
+    result = await mcp_client.call_tool(
+        "verify_solution",
+        {
+            "verifier": "CliqueVerifier",
+            "certificate": "{1,2}",
+            "problem_instance": "{}",
+        },
+    )
 
     assert not result.is_error
     assert text_of(result) == "true"
@@ -72,6 +84,7 @@ async def test_success_is_not_an_error(mcp_client, redux):
 async def test_helpers_raise_rather_than_return(redux):
     # The unit-level half of the contract: the helpers themselves raise.
     import server
+
     redux.respond(400, "bad request body")
 
     with pytest.raises(ToolError, match="bad request body"):
@@ -82,7 +95,9 @@ async def test_helpers_raise_rather_than_return(redux):
 
 async def test_bad_arguments_never_reach_the_backend(mcp_client, redux):
     # MCPServer validates the schema before the tool body runs.
-    result = await mcp_client.call_tool("solve_problem", {"solver": "X"})  # missing instance
+    result = await mcp_client.call_tool(
+        "solve_problem", {"solver": "X"}
+    )  # missing instance
 
     assert result.is_error
     assert redux.requests == []

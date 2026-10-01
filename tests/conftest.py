@@ -6,6 +6,7 @@ one configurable canned response. `mcp_client` connects a real MCP client
 session to the MCPServer in-process, so tool calls go through the same
 argument validation and exception-to-is_error conversion the LLM sees.
 """
+
 import httpx
 import pytest
 from mcp import Client

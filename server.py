@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-from mcp.server.mcpserver import MCPServer
-from mcp.server.mcpserver.exceptions import ToolError
-from typing import Optional
-from pathlib import Path
 import argparse
 import asyncio
-import httpx
 import json
 import sys
+
+import httpx
 import uvicorn
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 DEFAULT_BASE_URL = "http://redux.portneuf.cose.isu.edu:27000"
 
@@ -26,6 +25,7 @@ mcp = MCPServer("redux")
 # SDK withholds its text, sending only "Error executing tool <name>". Redux
 # error bodies carry the `expected_example` and `hint` the model self-corrects
 # from, so they must travel as ToolError. See tests/test_errors.py.
+
 
 async def _get(path: str, params: dict = None) -> str:
     r = await _client.get(path, params=params)
@@ -48,6 +48,7 @@ async def _post(path: str, body, params: dict = None) -> str:
 
 # ── Discovery tools ───────────────────────────────────────────────────────────
 
+
 @mcp.tool()
 async def list_problems() -> str:
     """List all problems in the Redux system, regardless of complexity class."""
@@ -57,19 +58,19 @@ async def list_problems() -> str:
 @mcp.tool()
 async def list_solvers(problem: str) -> str:
     """List all solvers available for a given problem."""
-    return await _get("/Navigation/Problem_SolversRefactor",
-                      {"chosenProblem": problem})
+    return await _get("/Navigation/Problem_SolversRefactor", {"chosenProblem": problem})
 
 
 @mcp.tool()
 async def list_verifiers(problem: str) -> str:
     """List all verifiers available for a given problem."""
-    return await _get("/Navigation/Problem_VerifiersRefactor",
-                      {"chosenProblem": problem})
+    return await _get(
+        "/Navigation/Problem_VerifiersRefactor", {"chosenProblem": problem}
+    )
 
 
 @mcp.tool()
-async def list_reductions(source: Optional[str] = None, target: Optional[str] = None) -> str:
+async def list_reductions(source: str | None = None, target: str | None = None) -> str:
     """Return the reduction graph as an adjacency map: from -> to -> [{className, endpoint, inputType, outputType}].
     Omit both source and target to get the full graph for multi-step planning.
     Pass source (e.g. "CLIQUE") to filter to edges originating there.
@@ -85,15 +86,18 @@ async def list_reductions(source: Optional[str] = None, target: Optional[str] = 
 @mcp.tool()
 async def list_visualizations(problem: str) -> str:
     """List all visualizations available for a given problem."""
-    return await _get("/Navigation/Problem_VisualizationsRefactor",
-                      {"chosenProblem": problem})
+    return await _get(
+        "/Navigation/Problem_VisualizationsRefactor", {"chosenProblem": problem}
+    )
 
 
 @mcp.tool()
 async def find_reduction_path(reducing_from: str, reducing_to: str) -> str:
     """Find the chain of reductions between two NP-Complete problems (e.g. SAT3 -> CLIQUE)."""
-    return await _get("/Navigation/NPC_NavGraph/reductionPath",
-                      {"reducingFrom": reducing_from, "reducingTo": reducing_to})
+    return await _get(
+        "/Navigation/NPC_NavGraph/reductionPath",
+        {"reducingFrom": reducing_from, "reducingTo": reducing_to},
+    )
 
 
 @mcp.tool()
@@ -104,13 +108,14 @@ async def get_info(interface: str) -> str:
 
 # ── Generation tools ──────────────────────────────────────────────────────────
 
+
 @mcp.tool()
 async def generate_problem(
     problem_type: str = "undirected-graph",
-    n: Optional[int] = None,
-    density: Optional[int] = None,
-    k: Optional[int] = None,
-    c: Optional[int] = None,
+    n: int | None = None,
+    density: int | None = None,
+    k: int | None = None,
+    c: int | None = None,
 ) -> str:
     """Generate a random problem instance.
     problem_type: undirected-graph (default), directed-graph, or sat3.
@@ -119,17 +124,21 @@ async def generate_problem(
     """
     t = problem_type.lower()
     if t == "sat3":
-        return await _get("/ProblemGenerator/Sat3",
-                          {"n": n or 3, "c": c or 3})
+        return await _get("/ProblemGenerator/Sat3", {"n": n or 3, "c": c or 3})
     elif t == "directed-graph":
-        return await _get("/ProblemGenerator/DirectedGraph",
-                          {"n": n or 5, "density": density or 50, "k": k if k is not None else -1})
+        return await _get(
+            "/ProblemGenerator/DirectedGraph",
+            {"n": n or 5, "density": density or 50, "k": k if k is not None else -1},
+        )
     else:
-        return await _get("/ProblemGenerator/UndirectedGraph",
-                          {"n": n or 5, "density": density or 50, "k": k if k is not None else -1})
+        return await _get(
+            "/ProblemGenerator/UndirectedGraph",
+            {"n": n or 5, "density": density or 50, "k": k if k is not None else -1},
+        )
 
 
 # ── Core operation tools ──────────────────────────────────────────────────────
+
 
 @mcp.tool()
 async def solve_problem(solver: str, instance: str) -> str:
@@ -138,11 +147,15 @@ async def solve_problem(solver: str, instance: str) -> str:
 
 
 @mcp.tool()
-async def verify_solution(verifier: str, certificate: str, problem_instance: str) -> str:
+async def verify_solution(
+    verifier: str, certificate: str, problem_instance: str
+) -> str:
     """Verify whether a solution certificate is valid for a problem instance. Returns true or false."""
-    return await _post("/ProblemProvider/verify",
-                       {"certificate": certificate, "problemInstance": problem_instance},
-                       {"verifier": verifier})
+    return await _post(
+        "/ProblemProvider/verify",
+        {"certificate": certificate, "problemInstance": problem_instance},
+        {"verifier": verifier},
+    )
 
 
 @mcp.tool()
@@ -154,25 +167,32 @@ async def reduce_problem(reduction: str, instance: str) -> str:
 @mcp.tool()
 async def reduce_certificate(reduction: str, certificate: str, instance: str) -> str:
     """Apply the reduction's forward direction to a source-problem certificate, returning a target-problem certificate. Mirrors `reduce_problem` on the certificate side: both apply the named reduction in its source→target direction. To go target→source, use the inverse reduction (e.g. SipserReduceToSAT3 instead of SipserReduceToCliqueStandard); call `list_reductions(source=..., target=...)` to find it."""
-    return await _post("/ProblemProvider/mapSolution", instance,
-                       {"reduction": reduction, "solution": certificate})
+    return await _post(
+        "/ProblemProvider/mapSolution",
+        instance,
+        {"reduction": reduction, "solution": certificate},
+    )
 
 
 @mcp.tool()
 async def visualize_problem(visualization: str, instance: str) -> str:
     """Get the visualization of a problem instance. Use list_visualizations to find available visualizations."""
-    return await _post("/ProblemProvider/visualize", instance, {"visualization": visualization})
+    return await _post(
+        "/ProblemProvider/visualize", instance, {"visualization": visualization}
+    )
 
 
 # ── Proxy mode ───────────────────────────────────────────────────────────────
+
 
 def _emit(out, data: bytes) -> None:
     out.write(data + b"\n")
     out.flush()
 
 
-async def _proxy_forward(client: httpx.AsyncClient, url: str, line: bytes,
-                         session_id: Optional[str], out) -> Optional[str]:
+async def _proxy_forward(
+    client: httpx.AsyncClient, url: str, line: bytes, session_id: str | None, out
+) -> str | None:
     """Forward one JSON-RPC line to the HTTP MCP server and write any response
     lines to `out`. Returns the session id to use for the next request (the
     server's Mcp-Session-Id if it sent one, else the one passed in)."""
@@ -203,8 +223,11 @@ async def _proxy_forward(client: httpx.AsyncClient, url: str, line: bytes,
                 if body:
                     _emit(out, body)
     except Exception as e:
-        err = {"jsonrpc": "2.0", "id": None,
-               "error": {"code": -32603, "message": f"Proxy error: {e}"}}
+        err = {
+            "jsonrpc": "2.0",
+            "id": None,
+            "error": {"code": -32603, "message": f"Proxy error: {e}"},
+        }
         _emit(out, json.dumps(err).encode())
 
     return session_id
@@ -229,11 +252,13 @@ async def _proxy_main(url: str) -> None:
             line = line.strip()
             if not line:
                 continue
-            session_id = await _proxy_forward(client, url, line, session_id,
-                                              sys.stdout.buffer)
+            session_id = await _proxy_forward(
+                client, url, line, session_id, sys.stdout.buffer
+            )
 
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Redux algorithms MCP server")
@@ -272,6 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
 def main():
     global _client
 
@@ -290,8 +316,9 @@ def main():
         # left at its 127.0.0.1 default, mcp 2.x auto-enables DNS-rebinding
         # protection and answers 421 to any request whose Host header isn't
         # localhost — which is every real request when we bind 0.0.0.0.
-        uvicorn.run(mcp.streamable_http_app(host=args.host),
-                    host=args.host, port=args.port)
+        uvicorn.run(
+            mcp.streamable_http_app(host=args.host), host=args.host, port=args.port
+        )
     else:
         mcp.run()
 

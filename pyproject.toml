@@ -40,7 +40,24 @@ dev = [
     # teardown in different tasks, which the MCP session's anyio cancel
     # scopes reject at teardown.
     "anyio>=4",
+    # The quality gates `rbs ci` runs (audit / format-check / lint); see rbs.toml.
+    "pip-audit",
+    "black",
+    "ruff",
 ]
+
+[tool.black]
+# Every version requires-python admits, so black never emits syntax 3.10 can't parse.
+target-version = ["py310", "py311", "py312", "py313", "py314"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+# black owns line length; don't double-enforce it (it won't wrap comments/strings)
+ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
