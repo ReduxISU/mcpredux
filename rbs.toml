@@ -1,0 +1,19 @@
+# Redux Build System pipeline config. See github.com/ReduxISU/Redux_Build_System.
+engine = "uv"
+
+# No `package`: server.py is a single module, so there is no coverage target yet.
+# `unit-test` runs the bare pytest, which pyproject's testpaths fences to tests/.
+
+[artifact]
+image = "ghcr.io/reduxisu/mcpredux"
+# The Dockerfile's CMD serves http on 8000; prod maps it to 27200 in compose.
+port = 8000
+health-path = "/health"
+
+[integration]
+# Lives outside tests/ so `rbs unit-test` never collects it. No [[integration.services]]:
+# tools/list is hermetic, so the stack is the artifact alone.
+command = "uv run pytest integration -v"
+
+[push]
+on-branch = "main"
