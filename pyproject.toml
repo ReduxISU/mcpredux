@@ -28,6 +28,10 @@ dependencies = [
     "mcp>=2.2.0,<3",
     "httpx>=0.28.1,<1",
     "uvicorn>=0.31.1,<1",
+    # Arrives via mcp, but server.py imports it directly for the /health route's
+    # Request/Response types, so it is declared here on the same principle as
+    # uvicorn. The floor is mcp's own on 3.14.
+    "starlette>=0.48.0,<4",
 ]
 
 # Installed by `uv sync` for development; excluded from the Docker image,

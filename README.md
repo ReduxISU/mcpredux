@@ -71,6 +71,9 @@ deployment behind a reverse proxy such as nginx.
 uv run server.py --mode http [--host 127.0.0.1] [--port 8000]
 ```
 
+`GET /health` answers `ok` once the server is up, without contacting the Redux
+backend — the probe for a compose healthcheck or `rbs integration-test`.
+
 Claude Code config (supports remote HTTP natively):
 
 ```json
