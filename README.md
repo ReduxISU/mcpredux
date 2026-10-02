@@ -114,6 +114,23 @@ Claude Desktop config:
 }
 ```
 
+## Tests
+
+```sh
+uv run pytest            # unit: the MCPServer in-process against a scripted fake Redux
+rbs integration-test     # integration: the built image serving MCP over HTTP
+```
+
+`integration/` lives outside `tests/` on purpose: it needs a running container and takes its
+address from `RBS_BASE_URL`, which `rbs integration-test` sets after building the image and
+waiting on `/health`. To point it at a container you started yourself:
+
+```sh
+RBS_BASE_URL=http://127.0.0.1:8000 uv run pytest integration -v
+```
+
+`test_image_smoke.sh` remains the quick manual check of a built image over both transports.
+
 ## Dependencies
 
 - [mcp](https://github.com/modelcontextprotocol/python-sdk) — official Python MCP SDK (2.x, `MCPServer`)
