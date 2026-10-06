@@ -3,3 +3,6 @@ mcp-weather-server/
 __pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
+.rbs/
+report.md

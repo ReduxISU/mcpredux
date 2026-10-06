@@ -136,3 +136,18 @@ RBS_BASE_URL=http://127.0.0.1:8000 uv run pytest integration -v
 - [mcp](https://github.com/modelcontextprotocol/python-sdk) — official Python MCP SDK (2.x, `MCPServer`)
 - [httpx](https://www.python-httpx.org) — async HTTP client
 - [uvicorn](https://www.uvicorn.org) — ASGI server (http mode)
+
+## CI and publishing
+
+`.github/workflows/rbs.yml` runs the whole pipeline through the
+[Redux Build System](https://github.com/ReduxISU/Redux_Build_System) inside this repo's dev
+container: `audit → format-check → lint → unit-test → build → integration-test → push`. Gates live
+in `rbs.toml`, and the same command runs locally:
+
+```sh
+rbs ci
+```
+
+On a push to `main`, and only if every gate passed, `push` publishes the exact image the
+integration tests ran against to `ghcr.io/reduxisu/mcpredux` as `:<sha7>` and `:latest`. On pull
+requests it reports `skipped`.
