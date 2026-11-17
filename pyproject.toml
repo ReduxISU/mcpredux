@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server for the Redux algorithms API"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 # mcp has a 2.x floor, not a cap: server.py uses `MCPServer` and `ToolError`,
 # which only exist from 2.0 on (2.0 removed the `mcp.server.fastmcp` module
 # this server was originally built on). `<3` keeps the next major from landing
@@ -51,12 +51,12 @@ dev = [
 ]
 
 [tool.black]
-# Every version requires-python admits, so black never emits syntax 3.10 can't parse.
-target-version = ["py310", "py311", "py312", "py313", "py314"]
+# Every version requires-python admits, so black never emits syntax 3.11 can't parse.
+target-version = ["py311", "py312", "py313", "py314"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B", "UP"]
